@@ -134,7 +134,7 @@ my-skill/
 └── scripts/           # Optional: helper scripts
 ```
 
-SkillSync copies the **entire directory**, excluding `.git/` and `.DS_Store` files.
+SkillSync copies the **entire directory**, excluding `.git/` and `.DS_Store` files. Symlinks are dereferenced — the actual file content is copied, not the symlink.
 
 ## Config
 

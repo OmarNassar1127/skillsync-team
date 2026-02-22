@@ -1,0 +1,39 @@
+{
+  "name": "skillsync-team",
+  "version": "1.0.0",
+  "description": "Git-native skill sharing for Claude Code teams",
+  "type": "module",
+  "bin": {
+    "skillsync": "./bin/skillsync.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "claude-code",
+    "skills",
+    "team",
+    "sync",
+    "cli",
+    "git",
+    "claudeception"
+  ],
+  "author": "Omar Nassar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OmarNassar1127/skillsync-team.git"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "fs-extra": "^11.2.0",
+    "gray-matter": "^4.0.3",
+    "ora": "^8.1.0",
+    "simple-git": "^3.27.0"
+  }
+}

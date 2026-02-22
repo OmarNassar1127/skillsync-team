@@ -131,6 +131,7 @@ export async function copySkillToRepo(skillName, skillsDir, repoSkillsDir) {
   await fs.ensureDir(dest);
   await fs.copy(src, dest, {
     overwrite: true,
+    dereference: true,
     filter: (srcPath) => {
       const name = srcPath.split('/').pop();
       return !shouldExclude(name);
@@ -145,6 +146,7 @@ export async function copySkillFromRepo(skillName, repoSkillsDir, skillsDir) {
   await fs.ensureDir(dest);
   await fs.copy(src, dest, {
     overwrite: true,
+    dereference: true,
     filter: (srcPath) => {
       const name = srcPath.split('/').pop();
       return !shouldExclude(name);
@@ -159,6 +161,7 @@ export async function backupSkill(skillName, skillsDir, backupsDir) {
 
   await fs.ensureDir(backupsDir);
   await fs.copy(src, dest, {
+    dereference: true,
     filter: (srcPath) => {
       const name = srcPath.split('/').pop();
       return !shouldExclude(name);

@@ -100,6 +100,14 @@ program
   }));
 
 program
+  .command('team')
+  .description('Show team members and their contributions')
+  .action(wrapAction(async () => {
+    const { team } = await import('./commands/team.js');
+    await team();
+  }));
+
+program
   .command('remove')
   .argument('<skill-name>', 'Name of the skill to remove from shared repo')
   .description('Remove a skill from the shared repository (keeps local copy)')

@@ -4,7 +4,7 @@ import { SKILLS_DIR, REPO_SKILLS_DIR } from '../lib/paths.js';
 import { readConfig, updateConfig } from '../lib/config.js';
 import { parseSkillMetadata, computeChecksum, listSkillFiles, copySkillToRepo } from '../lib/skills.js';
 import { pullLatest, commitAndPush } from '../lib/git.js';
-import { readRegistry, writeRegistry, addSkillToRegistry, generateReadme } from '../lib/registry.js';
+import { readRegistry, writeRegistry, addSkillToRegistry, generateReadme, registerMember, incrementMemberPush } from '../lib/registry.js';
 import { SkillNotFoundError, SkillSyncError } from '../lib/errors.js';
 import { log, spinner } from '../lib/logger.js';
 
@@ -57,6 +57,8 @@ export async function push(skillName, options) {
 
   const s3 = spinner('Updating registry...');
   await addSkillToRegistry(registry, skillName, metadata, config.author, files, checksum);
+  registerMember(registry, config.author);
+  incrementMemberPush(registry, config.author);
   await writeRegistry(registry);
   await generateReadme(registry, config.repoUrl);
   s3.succeed('Updated registry');

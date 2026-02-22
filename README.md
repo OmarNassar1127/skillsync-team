@@ -59,6 +59,7 @@ Now skills auto-pull at the start of each Claude Code session (1-hour cooldown).
 | `skillsync pull` | Pull new and updated skills from shared repo |
 | `skillsync list` | List all skills with their sync status |
 | `skillsync status` | Show detailed sync status and pending changes |
+| `skillsync team` | Show team members and their contributions |
 | `skillsync link` | Install auto-sync hook for Claude Code |
 | `skillsync unlink` | Remove auto-sync hook |
 | `skillsync remove <skill-name>` | Remove a skill from shared repo (keeps local) |

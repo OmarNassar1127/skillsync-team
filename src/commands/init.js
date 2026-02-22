@@ -2,9 +2,8 @@ import fs from 'fs-extra';
 import { createInterface } from 'node:readline';
 import { SKILLSYNC_DIR, REPO_DIR, REPO_SKILLS_DIR } from '../lib/paths.js';
 import { configExists, readConfig, writeConfig } from '../lib/config.js';
-import { cloneRepo, getGit, resetGit, isRepoEmpty, commitAndPush } from '../lib/git.js';
-import { readRegistry, writeRegistry, generateReadme } from '../lib/registry.js';
-import { getGitUserName } from '../lib/git.js';
+import { cloneRepo, getGit, resetGit, isRepoEmpty, commitAndPush, getGitUserName } from '../lib/git.js';
+import { readRegistry, writeRegistry, generateReadme, registerMember } from '../lib/registry.js';
 import { log, spinner } from '../lib/logger.js';
 
 async function prompt(question, defaultValue) {
@@ -108,6 +107,11 @@ export async function init(repoUrl, options) {
   });
 
   const registry = await readRegistry();
+  registerMember(registry, authorName);
+  await writeRegistry(registry);
+  await generateReadme(registry, repoUrl);
+  await commitAndPush(`join: ${authorName}`).catch(() => {});
+
   const skillCount = Object.keys(registry.skills).length;
 
   log.newline();

@@ -4,8 +4,12 @@
 
 You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudeception) to extract reusable skills from work sessions. But those skills are siloed on individual machines. SkillSync bridges the gap — a shared Git repo as the single source of truth, a CLI to push and pull, and an auto-sync hook so everyone stays current.
 
-## What's new in 2.0
+## What's new in 2.x
 
+**2.1**
+- **`skillsync update`** — self-update command. Checks npm for the latest version and runs the install for you. Use `--check` to just check without installing.
+
+**2.0**
 - **Interactive picker for `skillsync push`** — run with no arguments and get a checkbox list of all your local skills. Skills with local changes are pre-selected. Space toggles, enter pushes them all in a single batched commit. No more remembering exact skill names.
 - **Interactive picker for `skillsync pull`** — same UX in reverse. New and updated skills from teammates show up as a checklist; pick which ones you want.
 - **Auto version bump** — push a skill whose content changed but whose `version:` didn't? SkillSync bumps it for you (default: patch) and refreshes the `date:` field. No more "forgot to bump" registries full of `v0.0.0`.
@@ -13,7 +17,7 @@ You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudece
 - **`--bump <patch|minor|major|none>`** to control the auto-bump level per push.
 - **Security**: upgraded `simple-git` past two critical RCE CVEs.
 
-Upgrade existing installs: `npm install -g skillsync-team@latest`
+Upgrade existing installs: `skillsync update` (or `npm install -g skillsync-team@latest`)
 
 ```
 ~/.claude/skills/          ←→  shared Git repo  ←→  teammate's ~/.claude/skills/
@@ -86,6 +90,7 @@ Now skills auto-pull at the start of each Claude Code session (1-hour cooldown).
 | `skillsync link` | Install auto-sync hook for Claude Code |
 | `skillsync unlink` | Remove auto-sync hook |
 | `skillsync remove <skill-name>` | Remove a skill from shared repo (keeps local) |
+| `skillsync update` | Self-update SkillSync to the latest version on npm |
 
 ### Push flags
 

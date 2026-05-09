@@ -111,6 +111,16 @@ program
   }));
 
 program
+  .command('update')
+  .option('--check', 'Only check for updates, do not install')
+  .option('-f, --force', 'Reinstall even if already on the latest version')
+  .description('Update SkillSync itself to the latest version on npm')
+  .action(wrapAction(async (options) => {
+    const { update } = await import('./commands/update.js');
+    await update(options);
+  }));
+
+program
   .command('remove')
   .argument('<skill-name>', 'Name of the skill to remove from shared repo')
   .description('Remove a skill from the shared repository (keeps local copy)')

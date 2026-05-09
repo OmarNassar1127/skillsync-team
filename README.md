@@ -29,10 +29,22 @@ skillsync init git@github.com:your-team/shared-skills.git
 
 ### 3. Push your best skills
 
+Run `skillsync push` with no argument to open an interactive picker — space toggles, enter confirms. Skills with local changes are pre-selected, so usually you just hit enter:
+
+```bash
+skillsync push
+```
+
+Or push a specific skill by name (still supported):
+
 ```bash
 skillsync push claudeception
-skillsync push stripe-api-2026-changes
-skillsync push supabase-react-auth
+```
+
+Or push all changed skills without the picker:
+
+```bash
+skillsync push --all
 ```
 
 ### 4. Your teammates connect and pull
@@ -55,14 +67,47 @@ Now skills auto-pull at the start of each Claude Code session (1-hour cooldown).
 | Command | Description |
 |---------|-------------|
 | `skillsync init <repo-url>` | Connect to a shared skill repository |
-| `skillsync push <skill-name>` | Push a local skill to the shared repo |
-| `skillsync pull` | Pull new and updated skills from shared repo |
+| `skillsync push [skill-name]` | Push skill(s) to the shared repo. No name → picker. |
+| `skillsync pull` | Pull new and updated skills (picker on TTY) |
 | `skillsync list` | List all skills with their sync status |
 | `skillsync status` | Show detailed sync status and pending changes |
 | `skillsync team` | Show team members and their contributions |
 | `skillsync link` | Install auto-sync hook for Claude Code |
 | `skillsync unlink` | Remove auto-sync hook |
 | `skillsync remove <skill-name>` | Remove a skill from shared repo (keeps local) |
+
+### Push flags
+
+| Flag | Description |
+|------|-------------|
+| `-a, --all` | Push every changed skill without the picker |
+| `-f, --force` | Push even if skill is in your exclude list |
+| `-m, --message <msg>` | Custom commit message |
+| `-b, --bump <level>` | Auto-bump level when content changed but version didn't: `patch` (default), `minor`, `major`, `none` |
+
+### Pull flags
+
+| Flag | Description |
+|------|-------------|
+| `-a, --all` | Pull everything, skip the picker |
+| `-s, --skill <name>` | Pull only a specific skill |
+| `--theirs` | Accept remote version on conflicts |
+
+## Auto Version Bump (2.0)
+
+When you push a skill whose content has changed but whose `version:` in frontmatter
+hasn't, SkillSync automatically bumps the version (default: patch) and updates the
+`date:` field to today. The change is written into your local `SKILL.md` so the
+bump is visible in your working tree.
+
+```
++ my-skill                v0.0.3 → v0.0.4 (auto-bumped)
+```
+
+Disable per-push with `--bump none`. Bigger jumps with `--bump minor` or `--bump major`.
+
+If you'd already manually bumped (your frontmatter version is ahead of the registry),
+SkillSync respects that — no auto-bump.
 
 ## How It Works
 

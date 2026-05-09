@@ -46,10 +46,12 @@ program
 
 program
   .command('push')
-  .argument('<skill-name>', 'Name of the skill to push')
+  .argument('[skill-name]', 'Name of the skill to push (omit for interactive picker)')
+  .option('-a, --all', 'Push all changed skills, no picker')
   .option('-f, --force', 'Push even if skill is in exclude list')
   .option('-m, --message <msg>', 'Custom commit message')
-  .description('Push a local skill to the shared repository')
+  .option('-b, --bump <level>', 'Auto-bump level when content changed: patch | minor | major | none', 'patch')
+  .description('Push local skill(s) to the shared repository')
   .action(wrapAction(async (skillName, options) => {
     const { push } = await import('./commands/push.js');
     await push(skillName, options);
@@ -57,6 +59,7 @@ program
 
 program
   .command('pull')
+  .option('-a, --all', 'Pull everything, skip the picker')
   .option('-s, --skill <name>', 'Pull only a specific skill')
   .option('--theirs', 'Accept remote version on conflicts')
   .description('Pull new and updated skills from the shared repository')

@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import { join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import matter from 'gray-matter';
+import semver from 'semver';
 import { SKILLS_DIR } from './paths.js';
 
 const EXCLUDE_PATTERNS = ['.git', '.DS_Store', 'node_modules'];
@@ -152,6 +153,80 @@ export async function copySkillFromRepo(skillName, repoSkillsDir, skillsDir) {
       return !shouldExclude(name);
     },
   });
+}
+
+function setOrAppendKey(lines, key, newValue) {
+  const keyRegex = new RegExp(`^(\\s*${key}:\\s*)(['"]?)([^'"\\n]*?)\\2(\\s*)$`);
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(keyRegex);
+    if (m) {
+      lines[i] = `${m[1]}${m[2]}${newValue}${m[2]}${m[4]}`;
+      return { found: true, lines };
+    }
+  }
+  lines.push(`${key}: ${newValue}`);
+  return { found: false, lines };
+}
+
+function readKey(lines, key) {
+  const keyRegex = new RegExp(`^\\s*${key}:\\s*(['"]?)([^'"\\n]*?)\\1\\s*$`);
+  for (const line of lines) {
+    const m = line.match(keyRegex);
+    if (m) return m[2].trim();
+  }
+  return null;
+}
+
+export function bumpSkillVersion(skillDir, level = 'patch', { updateDate = true } = {}) {
+  const skillFile = findSkillFile(skillDir);
+  if (!skillFile) {
+    throw new Error(`No SKILL.md found in ${skillDir}`);
+  }
+
+  const raw = fs.readFileSync(skillFile.path, 'utf8');
+  const fmMatch = raw.match(/^(---\r?\n)([\s\S]*?)(\r?\n---\r?\n?)/);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!fmMatch) {
+    const newVersion = '0.0.1';
+    const dateLine = updateDate ? `\ndate: ${today}` : '';
+    const fm = `---\nversion: ${newVersion}${dateLine}\n---\n\n`;
+    fs.writeFileSync(skillFile.path, fm + raw);
+    return { oldVersion: null, newVersion };
+  }
+
+  const fmHeader = fmMatch[1];
+  const fmBody = fmMatch[2];
+  const fmFooter = fmMatch[3];
+  const body = raw.slice(fmMatch[0].length);
+
+  const lines = fmBody.split('\n');
+  const currentVersion = readKey(lines, 'version');
+
+  let newVersion;
+  if (currentVersion) {
+    const coerced = semver.valid(currentVersion) || (semver.coerce(currentVersion) || {}).version;
+    if (!coerced) {
+      newVersion = '0.0.1';
+    } else if (level === 'none') {
+      newVersion = coerced;
+    } else {
+      newVersion = semver.inc(coerced, level);
+    }
+  } else {
+    newVersion = level === 'none' ? '0.0.1' : '0.0.1';
+  }
+
+  setOrAppendKey(lines, 'version', newVersion);
+  if (updateDate) {
+    setOrAppendKey(lines, 'date', today);
+  }
+
+  const newFm = fmHeader + lines.join('\n') + fmFooter;
+  fs.writeFileSync(skillFile.path, newFm + body);
+
+  return { oldVersion: currentVersion, newVersion };
 }
 
 export async function backupSkill(skillName, skillsDir, backupsDir) {

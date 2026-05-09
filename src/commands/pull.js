@@ -6,6 +6,11 @@ import { pullLatest } from '../lib/git.js';
 import { readRegistry } from '../lib/registry.js';
 import { computeChecksum, copySkillFromRepo, backupSkill } from '../lib/skills.js';
 import { log, spinner } from '../lib/logger.js';
+import { pickSkillsToPull } from '../lib/picker.js';
+
+function isInteractive() {
+  return process.stdin.isTTY && process.stdout.isTTY;
+}
 
 export async function pull(options) {
   const config = await readConfig();
@@ -27,10 +32,9 @@ export async function pull(options) {
     return;
   }
 
-  const newSkills = [];
-  const updatedSkills = [];
+  const newRows = [];
+  const updatedRows = [];
   const unchangedSkills = [];
-  const skippedSkills = [];
 
   for (const skillName of remoteSkills) {
     if (options.skill && options.skill !== skillName) continue;
@@ -41,9 +45,10 @@ export async function pull(options) {
     if (!await fs.pathExists(repoDir)) continue;
 
     if (!await fs.pathExists(localDir)) {
-      await copySkillFromRepo(skillName, REPO_SKILLS_DIR, SKILLS_DIR);
-      newSkills.push({
+      newRows.push({
         name: skillName,
+        status: 'new',
+        version: registry.skills[skillName].skillVersion,
         pushedBy: registry.skills[skillName].pushedBy,
       });
       continue;
@@ -63,30 +68,68 @@ export async function pull(options) {
       continue;
     }
 
-    const backupPath = await backupSkill(skillName, SKILLS_DIR, BACKUPS_DIR);
-    await copySkillFromRepo(skillName, REPO_SKILLS_DIR, SKILLS_DIR);
-    updatedSkills.push({
+    updatedRows.push({
       name: skillName,
+      status: 'updated',
+      version: registry.skills[skillName].skillVersion,
       pushedBy: registry.skills[skillName].pushedBy,
-      backupPath,
     });
+  }
+
+  const candidateRows = [...newRows, ...updatedRows];
+
+  if (candidateRows.length === 0) {
+    await updateConfig({ lastPull: new Date().toISOString() });
+    log.success('Everything is up to date.');
+    if (unchangedSkills.length > 0) {
+      log.dim(`Unchanged: ${unchangedSkills.length} skills`);
+    }
+    return;
+  }
+
+  let selected;
+  if (options.all || options.skill || !isInteractive()) {
+    selected = candidateRows.map(r => r.name);
+  } else {
+    selected = await pickSkillsToPull(candidateRows);
+    if (selected.length === 0) {
+      log.info('Nothing selected. Aborted.');
+      return;
+    }
+  }
+
+  const selectedSet = new Set(selected);
+  const newApplied = [];
+  const updatedApplied = [];
+
+  for (const row of newRows) {
+    if (!selectedSet.has(row.name)) continue;
+    await copySkillFromRepo(row.name, REPO_SKILLS_DIR, SKILLS_DIR);
+    newApplied.push(row);
+  }
+
+  for (const row of updatedRows) {
+    if (!selectedSet.has(row.name)) continue;
+    const backupPath = await backupSkill(row.name, SKILLS_DIR, BACKUPS_DIR);
+    await copySkillFromRepo(row.name, REPO_SKILLS_DIR, SKILLS_DIR);
+    updatedApplied.push({ ...row, backupPath });
   }
 
   await updateConfig({ lastPull: new Date().toISOString() });
 
   log.newline();
 
-  if (newSkills.length > 0) {
+  if (newApplied.length > 0) {
     log.header('New skills:');
-    for (const s of newSkills) {
-      log.skill(`+ ${s.name}`, `by ${s.pushedBy}`);
+    for (const r of newApplied) {
+      log.skill(`+ ${r.name}`, `by ${r.pushedBy}`);
     }
   }
 
-  if (updatedSkills.length > 0) {
+  if (updatedApplied.length > 0) {
     log.header('Updated skills:');
-    for (const s of updatedSkills) {
-      log.skill(`~ ${s.name}`, `by ${s.pushedBy} (backed up)`);
+    for (const r of updatedApplied) {
+      log.skill(`~ ${r.name}`, `by ${r.pushedBy} (backed up)`);
     }
   }
 
@@ -94,11 +137,13 @@ export async function pull(options) {
     log.dim(`\n  Unchanged: ${unchangedSkills.length} skills`);
   }
 
-  const total = newSkills.length + updatedSkills.length;
-  if (total > 0) {
-    log.newline();
-    log.success(`Pulled ${newSkills.length} new, ${updatedSkills.length} updated skill(s).`);
+  const skipped = candidateRows.length - selected.length;
+  log.newline();
+  if (skipped > 0) {
+    log.success(
+      `Pulled ${newApplied.length} new, ${updatedApplied.length} updated. Skipped ${skipped}.`
+    );
   } else {
-    log.success('Everything is up to date.');
+    log.success(`Pulled ${newApplied.length} new, ${updatedApplied.length} updated skill(s).`);
   }
 }

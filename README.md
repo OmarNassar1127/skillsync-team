@@ -4,6 +4,17 @@
 
 You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudeception) to extract reusable skills from work sessions. But those skills are siloed on individual machines. SkillSync bridges the gap — a shared Git repo as the single source of truth, a CLI to push and pull, and an auto-sync hook so everyone stays current.
 
+## What's new in 2.0
+
+- **Interactive picker for `skillsync push`** — run with no arguments and get a checkbox list of all your local skills. Skills with local changes are pre-selected. Space toggles, enter pushes them all in a single batched commit. No more remembering exact skill names.
+- **Interactive picker for `skillsync pull`** — same UX in reverse. New and updated skills from teammates show up as a checklist; pick which ones you want.
+- **Auto version bump** — push a skill whose content changed but whose `version:` didn't? SkillSync bumps it for you (default: patch) and refreshes the `date:` field. No more "forgot to bump" registries full of `v0.0.0`.
+- **`--all` flag** on push and pull for non-interactive use.
+- **`--bump <patch|minor|major|none>`** to control the auto-bump level per push.
+- **Security**: upgraded `simple-git` past two critical RCE CVEs.
+
+Upgrade existing installs: `npm install -g skillsync-team@latest`
+
 ```
 ~/.claude/skills/          ←→  shared Git repo  ←→  teammate's ~/.claude/skills/
    your skills                    (truth)              their skills

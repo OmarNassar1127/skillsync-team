@@ -1,7 +1,7 @@
 {
   "name": "skillsync-team",
   "version": "2.0.0",
-  "description": "Git-native skill sharing for Claude Code teams",
+  "description": "Git-native skill sharing for Claude Code teams — interactive push/pull picker, auto version bump on edit, batch commits.",
   "type": "module",
   "bin": {
     "skillsync": "./bin/skillsync.js"

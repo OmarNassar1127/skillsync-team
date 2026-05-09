@@ -10,7 +10,7 @@ You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudece
 - **`skillsync update`** — self-update command. Checks npm for the latest version and runs the install for you. Use `--check` to just check without installing.
 
 **2.0**
-- **Interactive picker for `skillsync push`** — run with no arguments and get a checkbox list of all your local skills. Skills with local changes are pre-selected. Space toggles, enter pushes them all in a single batched commit. No more remembering exact skill names.
+- **Interactive picker for `skillsync push`** — run with no arguments and get a checkbox list of only your **pushable** skills (new and locally-changed; skills already in sync are hidden). Local changes are pre-selected. Space toggles, enter pushes them all in a single batched commit. No more remembering exact skill names.
 - **Interactive picker for `skillsync pull`** — same UX in reverse. New and updated skills from teammates show up as a checklist; pick which ones you want.
 - **Auto version bump** — push a skill whose content changed but whose `version:` didn't? SkillSync bumps it for you (default: patch) and refreshes the `date:` field. No more "forgot to bump" registries full of `v0.0.0`.
 - **`--all` flag** on push and pull for non-interactive use.
@@ -44,7 +44,7 @@ skillsync init git@github.com:your-team/shared-skills.git
 
 ### 3. Push your best skills
 
-Run `skillsync push` with no argument to open an interactive picker — space toggles, enter confirms. Skills with local changes are pre-selected, so usually you just hit enter:
+Run `skillsync push` with no argument to open an interactive picker. It shows only the skills that have something to push — new ones and ones with local changes — so the list stays short. Local changes are pre-selected, so usually you just hit enter:
 
 ```bash
 skillsync push

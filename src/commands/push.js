@@ -147,7 +147,18 @@ async function resolveSkillNames(skillNameArg, options, config, registry) {
       .map(c => c.name);
   }
 
-  return pickSkillsToPush(candidates, { allowExcluded: !!options.force });
+  const pushable = candidates.filter(c => c.status !== 'synced');
+
+  if (pushable.length === 0) {
+    log.success('Nothing to push — all local skills are in sync with the shared repo.');
+    return [];
+  }
+
+  const selected = await pickSkillsToPush(pushable, { allowExcluded: !!options.force });
+  if (selected.length === 0) {
+    log.info('Nothing selected. Aborted.');
+  }
+  return selected;
 }
 
 export async function push(skillNameArg, options) {
@@ -167,9 +178,6 @@ export async function push(skillNameArg, options) {
   const skillNames = await resolveSkillNames(skillNameArg, options, config, registry);
 
   if (skillNames.length === 0) {
-    if (skillNameArg === undefined && !options.all) {
-      log.info('Nothing selected. Aborted.');
-    }
     return;
   }
 

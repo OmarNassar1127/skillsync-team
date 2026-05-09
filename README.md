@@ -130,16 +130,17 @@ SkillSync respects that — no auto-bump.
 SkillSync uses Git as the transport layer. No server, no database, no accounts — just a Git repo your team already knows how to use.
 
 **Push flow:**
-1. You run `skillsync push my-skill`
-2. SkillSync copies `~/.claude/skills/my-skill/` into the shared repo
-3. Updates `registry.json` with metadata (author, version, checksum)
-4. Commits and pushes to remote
+1. You run `skillsync push` (picker), `skillsync push my-skill`, or `skillsync push --all`
+2. SkillSync copies the selected skill(s) from `~/.claude/skills/` into the shared repo
+3. Auto-bumps `version:` and `date:` if content changed but frontmatter didn't (default patch)
+4. Updates `registry.json` with metadata (author, version, checksum)
+5. Commits once and pushes to remote — even when you select multiple skills
 
 **Pull flow:**
-1. You run `skillsync pull`
+1. You run `skillsync pull` (picker on TTY) or `skillsync pull --all`
 2. SkillSync pulls the latest from the shared repo
 3. Compares checksums to find new/updated skills
-4. Copies them into your `~/.claude/skills/`
+4. You tick which to apply; the picked ones are copied into `~/.claude/skills/` (skips the rest)
 
 **Auto-sync:**
 - `skillsync link` installs a Claude Code hook (`UserPromptSubmit`)
@@ -172,9 +173,9 @@ You can also exclude skills permanently:
 
 When you pull and a skill has changed both locally and remotely:
 
-1. Your local version is **backed up** to `~/.skillsync/backups/`
-2. The remote version overwrites local
-3. You can compare and merge manually if needed
+1. The skill appears in the pull picker — uncheck it to keep your local version untouched
+2. If you accept it (or use `--all`), your local version is **backed up** to `~/.skillsync/backups/`
+3. The remote version overwrites local; you can compare and merge manually from the backup
 
 For Git-level conflicts (rare — two people pushing the same skill simultaneously):
 

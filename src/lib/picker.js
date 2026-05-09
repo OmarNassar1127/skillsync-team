@@ -36,7 +36,7 @@ export async function pickSkillsToPush(rows, { allowExcluded = false } = {}) {
     return {
       name: `${name} ${version}  ${tagStr}`,
       value: r.name,
-      checked: r.preselect && !(r.excluded && !allowExcluded),
+      checked: false,
       disabled: r.excluded && !allowExcluded ? '(excluded — pass --force)' : false,
     };
   });

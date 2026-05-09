@@ -6,6 +6,11 @@ You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudece
 
 ## What's new in 2.x
 
+**2.2**
+- **`skillsync diff <skill>`** — see exactly what would change before you push or pull. Side-by-side diff between your local skill and the shared repo. Pass `--pull` to flip direction.
+- **Validation on push** — SkillSync now refuses to push a skill with malformed YAML, an empty description, or no SKILL.md at all. Warnings for soft issues (name doesn't match dir, invalid semver). One teammate's broken push can't break everyone's pull.
+- **Outdated-version nudge** — when a newer SkillSync is on npm, every command shows a one-line banner: *"v2.2.0 → v2.3.0 available. Run skillsync update to install."* Cached for 24h so it's not noisy.
+
 **2.1**
 - **`skillsync update`** — self-update command. Checks npm for the latest version and runs the install for you. Use `--check` to just check without installing.
 
@@ -91,6 +96,7 @@ Now skills auto-pull at the start of each Claude Code session (1-hour cooldown).
 | `skillsync unlink` | Remove auto-sync hook |
 | `skillsync remove <skill-name>` | Remove a skill from shared repo (keeps local) |
 | `skillsync update` | Self-update SkillSync to the latest version on npm |
+| `skillsync diff <skill>` | Show what would change between your local skill and the shared repo |
 
 ### Push flags
 

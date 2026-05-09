@@ -10,6 +10,7 @@ import {
   copySkillToRepo,
   listLocalSkills,
   bumpSkillVersion,
+  validateSkillForPush,
 } from '../lib/skills.js';
 import { pullLatest, commitAndPush } from '../lib/git.js';
 import {
@@ -90,6 +91,18 @@ async function pushOne(skillName, options, registry, config, bumpLevel) {
       `Skill "${skillName}" is in your exclude list.`,
       'Use --force to push anyway, or edit ~/.skillsync/config.json'
     );
+  }
+
+  const validation = validateSkillForPush(skillDir);
+  if (validation.errors.length > 0) {
+    const issues = validation.errors.map(e => `  · ${e}`).join('\n');
+    throw new SkillSyncError(
+      `${skillName} is not a valid skill:\n${issues}`,
+      'Fix the issues above and try again.'
+    );
+  }
+  for (const w of validation.warnings) {
+    log.warn(`${skillName}: ${w}`);
   }
 
   let metadata = parseSkillMetadata(skillDir);

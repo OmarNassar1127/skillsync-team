@@ -155,6 +155,63 @@ export async function copySkillFromRepo(skillName, repoSkillsDir, skillsDir) {
   });
 }
 
+export function validateSkillForPush(skillDir) {
+  const errors = [];
+  const warnings = [];
+  const dirName = skillDir.split('/').pop();
+
+  const skillFile = findSkillFile(skillDir);
+  if (!skillFile) {
+    errors.push('No SKILL.md (or skill.md) file found in the skill directory.');
+    return { errors, warnings };
+  }
+
+  let raw;
+  try {
+    raw = fs.readFileSync(skillFile.path, 'utf8');
+  } catch (err) {
+    errors.push(`Could not read ${skillFile.filename}: ${err.message}`);
+    return { errors, warnings };
+  }
+
+  let parsed;
+  try {
+    parsed = matter(raw);
+  } catch (err) {
+    errors.push(`Malformed YAML frontmatter in ${skillFile.filename}: ${err.message}`);
+    return { errors, warnings };
+  }
+
+  const data = parsed.data || {};
+  const hasFrontmatter = Object.keys(data).length > 0;
+
+  if (!hasFrontmatter) {
+    errors.push(`${skillFile.filename} has no YAML frontmatter (expected --- ... --- block at the top).`);
+    return { errors, warnings };
+  }
+
+  const description = typeof data.description === 'string' ? data.description.trim() : '';
+  if (!description) {
+    errors.push(`Frontmatter is missing a non-empty "description:" field.`);
+  } else if (description.length < 10) {
+    warnings.push(`"description" is very short (${description.length} chars). Aim for one clear sentence.`);
+  }
+
+  if (data.name && typeof data.name === 'string' && data.name !== dirName) {
+    warnings.push(`Frontmatter "name: ${data.name}" doesn't match directory name "${dirName}".`);
+  }
+
+  if (data.version) {
+    const versionStr = String(data.version);
+    const coerced = semver.valid(versionStr) || (semver.coerce(versionStr) || {}).version;
+    if (!coerced) {
+      warnings.push(`"version: ${versionStr}" is not a valid semver. Auto-bump may behave oddly.`);
+    }
+  }
+
+  return { errors, warnings };
+}
+
 function setOrAppendKey(lines, key, newValue) {
   const keyRegex = new RegExp(`^(\\s*${key}:\\s*)(['"]?)([^'"\\n]*?)\\2(\\s*)$`);
   for (let i = 0; i < lines.length; i++) {

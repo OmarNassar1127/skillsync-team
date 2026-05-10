@@ -319,24 +319,42 @@ export function effectiveSortTime(s) {
   return s.bornAt || s.newestMtime || 0;
 }
 
+function validateSkillName(name, label = 'skill name') {
+  if (!name || typeof name !== 'string') {
+    throw new Error(`Invalid ${label}: empty or not a string.`);
+  }
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error(`Invalid ${label}: empty.`);
+  }
+  if (trimmed.includes('/') || trimmed.includes('\\') || trimmed.includes('\0')) {
+    throw new Error(`Invalid ${label}: must not contain slashes or null bytes.`);
+  }
+  if (trimmed === '.' || trimmed === '..' || trimmed.startsWith('..')) {
+    throw new Error(`Invalid ${label}: must not be a relative path.`);
+  }
+  return trimmed;
+}
+
 export async function archiveSkill(skillName, { reason, archivedBy, version, checksum, wasShared } = {}) {
-  const src = join(SKILLS_DIR, skillName);
+  const safe = validateSkillName(skillName, 'skill name');
+  const src = join(SKILLS_DIR, safe);
   if (!await fs.pathExists(src)) {
-    throw new Error(`Skill "${skillName}" not found in ~/.claude/skills/`);
+    throw new Error(`Skill "${safe}" not found in ~/.claude/skills/`);
   }
 
   await fs.ensureDir(ARCHIVE_DIR);
 
-  let dest = join(ARCHIVE_DIR, skillName);
+  let dest = join(ARCHIVE_DIR, safe);
   if (await fs.pathExists(dest)) {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    dest = join(ARCHIVE_DIR, `${skillName}-${stamp}`);
+    dest = join(ARCHIVE_DIR, `${safe}-${stamp}`);
   }
 
   await fs.move(src, dest, { overwrite: false });
 
   const meta = {
-    name: skillName,
+    name: safe,
     archivedAt: new Date().toISOString(),
     archivedBy: archivedBy || 'unknown',
     lastVersion: version || null,
@@ -350,9 +368,10 @@ export async function archiveSkill(skillName, { reason, archivedBy, version, che
 }
 
 export async function unarchiveSkill(archiveEntry) {
-  const src = join(ARCHIVE_DIR, archiveEntry);
+  const safeEntry = validateSkillName(archiveEntry, 'archive entry');
+  const src = join(ARCHIVE_DIR, safeEntry);
   if (!await fs.pathExists(src)) {
-    throw new Error(`Archived skill "${archiveEntry}" not found in archive.`);
+    throw new Error(`Archived skill "${safeEntry}" not found in archive.`);
   }
 
   let meta = null;
@@ -365,7 +384,8 @@ export async function unarchiveSkill(archiveEntry) {
     }
   }
 
-  const restoredName = (meta && meta.name) || archiveEntry.replace(/-\d{4}-\d{2}-\d{2}T.*$/, '');
+  const restoredName = (meta && meta.name) || safeEntry.replace(/-\d{4}-\d{2}-\d{2}T.*$/, '');
+  validateSkillName(restoredName, 'restored skill name');
   const dest = join(SKILLS_DIR, restoredName);
 
   if (await fs.pathExists(dest)) {

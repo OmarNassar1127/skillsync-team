@@ -18,7 +18,6 @@ import {
   removeSkillFromRegistry,
   generateReadme,
 } from '../lib/registry.js';
-import { SkillNotFoundError } from '../lib/errors.js';
 import { log, spinner } from '../lib/logger.js';
 import { pickSkillsToArchive } from '../lib/picker.js';
 
@@ -79,39 +78,47 @@ export async function archive(skillNameArg, options) {
 
   const archivedFromRepo = [];
   const archiveResults = [];
+  const failures = [];
 
   for (const name of skillNames) {
-    const skillDir = join(SKILLS_DIR, name);
-    if (!await fs.pathExists(skillDir)) {
-      log.error(`  × ${name} — not found locally`);
-      continue;
-    }
-
-    const metadata = parseSkillMetadata(skillDir);
-    const checksum = await computeChecksum(skillDir);
-    const wasShared = !!registry.skills[name];
-
-    if (wasShared) {
-      const repoDir = join(REPO_SKILLS_DIR, name);
-      if (await fs.pathExists(repoDir)) {
-        await fs.remove(repoDir);
+    try {
+      const skillDir = join(SKILLS_DIR, name);
+      if (!await fs.pathExists(skillDir)) {
+        log.error(`  × ${name} — not found locally`);
+        continue;
       }
-      await removeSkillFromRegistry(registry, name);
-      archivedFromRepo.push(name);
+
+      const metadata = parseSkillMetadata(skillDir);
+      const checksum = await computeChecksum(skillDir);
+      const wasShared = !!registry.skills[name];
+
+      // 1. Move local files to archive FIRST. If this fails, nothing else has been touched.
+      const result = await archiveSkill(name, {
+        reason: options.reason,
+        archivedBy: config.author,
+        version: metadata.version,
+        checksum,
+        wasShared,
+      });
+      archiveResults.push({ name, ...result });
+
+      // 2. Now mutate registry / delete repo dir. The local copy is safely in archive.
+      if (wasShared) {
+        const repoDir = join(REPO_SKILLS_DIR, name);
+        if (await fs.pathExists(repoDir)) {
+          await fs.remove(repoDir);
+        }
+        await removeSkillFromRegistry(registry, name);
+        archivedFromRepo.push(name);
+      }
+
+      log.plain(
+        `  ${chalk.yellow('▽')} ${chalk.cyan(name)} ${chalk.dim(`v${metadata.version}`)} ${chalk.dim(wasShared ? '(removed from shared repo)' : '(local-only)')}`
+      );
+    } catch (err) {
+      failures.push({ name, err });
+      log.error(`  × ${name} — ${err.message}`);
     }
-
-    const result = await archiveSkill(name, {
-      reason: options.reason,
-      archivedBy: config.author,
-      version: metadata.version,
-      checksum,
-      wasShared,
-    });
-    archiveResults.push({ name, ...result });
-
-    log.plain(
-      `  ${chalk.yellow('▽')} ${chalk.cyan(name)} ${chalk.dim(`v${metadata.version}`)} ${chalk.dim(wasShared ? '(removed from shared repo)' : '(local-only)')}`
-    );
   }
 
   if (archivedFromRepo.length > 0) {
@@ -136,8 +143,13 @@ export async function archive(skillNameArg, options) {
   await updateConfig({ lastPush: new Date().toISOString() });
 
   log.newline();
-  log.success(
-    `Archived ${archiveResults.length} skill${archiveResults.length === 1 ? '' : 's'} to ~/.skillsync/archive/.`
-  );
-  log.dim('Restore with: skillsync unarchive [name]');
+  if (archiveResults.length > 0) {
+    log.success(
+      `Archived ${archiveResults.length} skill${archiveResults.length === 1 ? '' : 's'} to ~/.skillsync/archive/.`
+    );
+    log.dim('Restore with: skillsync unarchive [name]');
+  }
+  if (failures.length > 0) {
+    log.warn(`${failures.length} failed (see errors above).`);
+  }
 }

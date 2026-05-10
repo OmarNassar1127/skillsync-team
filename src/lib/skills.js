@@ -128,6 +128,7 @@ export async function listSkillFiles(skillDir) {
 }
 
 export async function copySkillToRepo(skillName, skillsDir, repoSkillsDir) {
+  validateSkillName(skillName);
   const src = join(skillsDir, skillName);
   const dest = join(repoSkillsDir, skillName);
 
@@ -143,6 +144,7 @@ export async function copySkillToRepo(skillName, skillsDir, repoSkillsDir) {
 }
 
 export async function copySkillFromRepo(skillName, repoSkillsDir, skillsDir) {
+  validateSkillName(skillName);
   const src = join(repoSkillsDir, skillName);
   const dest = join(skillsDir, skillName);
 
@@ -319,7 +321,7 @@ export function effectiveSortTime(s) {
   return s.bornAt || s.newestMtime || 0;
 }
 
-function validateSkillName(name, label = 'skill name') {
+export function validateSkillName(name, label = 'skill name') {
   if (!name || typeof name !== 'string') {
     throw new Error(`Invalid ${label}: empty or not a string.`);
   }
@@ -334,6 +336,10 @@ function validateSkillName(name, label = 'skill name') {
     throw new Error(`Invalid ${label}: must not be a relative path.`);
   }
   return trimmed;
+}
+
+export function isValidSkillName(name) {
+  try { validateSkillName(name); return true; } catch { return false; }
 }
 
 export async function archiveSkill(skillName, { reason, archivedBy, version, checksum, wasShared } = {}) {
@@ -439,6 +445,7 @@ export async function listArchivedSkills() {
 }
 
 export async function backupSkill(skillName, skillsDir, backupsDir) {
+  validateSkillName(skillName);
   const src = join(skillsDir, skillName);
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dest = join(backupsDir, `${skillName}-${timestamp}`);

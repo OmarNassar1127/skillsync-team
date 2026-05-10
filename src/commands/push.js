@@ -13,6 +13,7 @@ import {
   validateSkillForPush,
   getSkillTimestamps,
   effectiveSortTime,
+  validateSkillName,
 } from '../lib/skills.js';
 import { pullLatest, commitAndPush } from '../lib/git.js';
 import {
@@ -87,6 +88,7 @@ function resolveBumpLevel(options) {
 }
 
 async function pushOne(skillName, options, registry, config, bumpLevel) {
+  validateSkillName(skillName);
   const skillDir = join(SKILLS_DIR, skillName);
   if (!await fs.pathExists(skillDir)) {
     throw new SkillNotFoundError(skillName);

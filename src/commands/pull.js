@@ -4,7 +4,7 @@ import { SKILLS_DIR, REPO_SKILLS_DIR, BACKUPS_DIR } from '../lib/paths.js';
 import { readConfig, updateConfig } from '../lib/config.js';
 import { pullLatest } from '../lib/git.js';
 import { readRegistry } from '../lib/registry.js';
-import { computeChecksum, copySkillFromRepo, backupSkill, getSkillTimestamps, effectiveSortTime } from '../lib/skills.js';
+import { computeChecksum, copySkillFromRepo, backupSkill, getSkillTimestamps, effectiveSortTime, isValidSkillName } from '../lib/skills.js';
 import { log, spinner } from '../lib/logger.js';
 import { pickSkillsToPull } from '../lib/picker.js';
 
@@ -25,7 +25,15 @@ export async function pull(options) {
   }
 
   const registry = await readRegistry();
-  const remoteSkills = Object.keys(registry.skills);
+  const allRegistryKeys = Object.keys(registry.skills);
+
+  // Filter out any malformed registry keys (path traversal, slashes, null bytes).
+  // A malicious shared repo could try to write outside ~/.claude/skills/ via crafted keys.
+  const remoteSkills = allRegistryKeys.filter(name => isValidSkillName(name));
+  const rejected = allRegistryKeys.length - remoteSkills.length;
+  if (rejected > 0) {
+    log.warn(`Ignored ${rejected} registry entr${rejected === 1 ? 'y' : 'ies'} with invalid skill name(s). Possible tampering — check the shared repo.`);
+  }
 
   if (remoteSkills.length === 0) {
     log.info('No skills in shared repo yet.');

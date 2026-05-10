@@ -4,8 +4,8 @@ import { spawn } from 'node:child_process';
 import chalk from 'chalk';
 import { SKILLS_DIR, REPO_SKILLS_DIR } from '../lib/paths.js';
 import { readConfig } from '../lib/config.js';
-import { listSkillFiles } from '../lib/skills.js';
-import { SkillNotFoundError } from '../lib/errors.js';
+import { listSkillFiles, isValidSkillName } from '../lib/skills.js';
+import { SkillNotFoundError, SkillSyncError } from '../lib/errors.js';
 import { log } from '../lib/logger.js';
 
 function runGitDiff(srcDir, dstDir) {
@@ -24,6 +24,13 @@ function runGitDiff(srcDir, dstDir) {
 }
 
 export async function diff(skillName, options) {
+  if (!isValidSkillName(skillName)) {
+    throw new SkillSyncError(
+      `Invalid skill name: "${skillName}".`,
+      'Skill names must contain only letters, digits, dashes, dots, or underscores — and must not be a relative path.'
+    );
+  }
+
   await readConfig();
 
   const localDir = join(SKILLS_DIR, skillName);

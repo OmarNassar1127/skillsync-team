@@ -1,12 +1,21 @@
 import { SkillSyncError } from '../lib/errors.js';
 
 const BASH_SCRIPT = `# SkillSync bash completion
+# NOTE: We deliberately avoid \`compgen -W "$response"\` because compgen
+# performs command-substitution expansion on candidate strings, which
+# would be a remote-code-execution sink if a skill name ever contained
+# \\$(...). We read line-by-line and prefix-match in pure bash instead.
 _skillsync_complete() {
-  local IFS=$'\\n'
   local cur="\${COMP_WORDS[COMP_CWORD]}"
-  local response
-  response=$(skillsync __complete "\${COMP_WORDS[@]:1:COMP_CWORD-1}" "$cur" 2>/dev/null)
-  COMPREPLY=( $(compgen -W "$response" -- "$cur") )
+  local response line
+  response=$(skillsync __complete "\${COMP_WORDS[@]:1:COMP_CWORD-1}" "$cur" 2>/dev/null) || return
+  COMPREPLY=()
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ "$line" == "$cur"* ]]; then
+      COMPREPLY+=("$line")
+    fi
+  done <<< "$response"
 }
 complete -F _skillsync_complete skillsync
 `;

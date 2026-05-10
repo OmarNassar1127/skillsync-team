@@ -41,8 +41,16 @@ async function archivedNames() {
   }
 }
 
+// Reject anything containing shell metacharacters. Tab completion only
+// shows safe names; users with weirdly-named skills can still type the
+// name explicitly. This is a critical defense — bash compgen -W expands
+// command substitution in candidate strings, so an attacker-controlled
+// skill name with $(...) could RCE during tab completion.
+const SHELL_SAFE = /^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$/;
+
 function print(items, partial = '') {
   for (const item of items) {
+    if (!SHELL_SAFE.test(item)) continue;
     if (!partial || item.startsWith(partial)) {
       process.stdout.write(item + '\n');
     }

@@ -4,7 +4,7 @@ import { SKILLS_DIR, REPO_SKILLS_DIR, BACKUPS_DIR } from '../lib/paths.js';
 import { readConfig, updateConfig } from '../lib/config.js';
 import { pullLatest } from '../lib/git.js';
 import { readRegistry } from '../lib/registry.js';
-import { computeChecksum, copySkillFromRepo, backupSkill } from '../lib/skills.js';
+import { computeChecksum, copySkillFromRepo, backupSkill, getSkillTimestamps, effectiveSortTime } from '../lib/skills.js';
 import { log, spinner } from '../lib/logger.js';
 import { pickSkillsToPull } from '../lib/picker.js';
 
@@ -45,11 +45,14 @@ export async function pull(options) {
     if (!await fs.pathExists(repoDir)) continue;
 
     if (!await fs.pathExists(localDir)) {
+      const ts = await getSkillTimestamps(repoDir);
       newRows.push({
         name: skillName,
         status: 'new',
         version: registry.skills[skillName].skillVersion,
         pushedBy: registry.skills[skillName].pushedBy,
+        bornAt: ts.bornAt,
+        newestMtime: ts.newestMtime,
       });
       continue;
     }
@@ -68,15 +71,20 @@ export async function pull(options) {
       continue;
     }
 
+    const ts = await getSkillTimestamps(repoDir);
     updatedRows.push({
       name: skillName,
       status: 'updated',
       version: registry.skills[skillName].skillVersion,
       pushedBy: registry.skills[skillName].pushedBy,
+      bornAt: ts.bornAt,
+      newestMtime: ts.newestMtime,
     });
   }
 
-  const candidateRows = [...newRows, ...updatedRows];
+  const candidateRows = [...newRows, ...updatedRows].sort(
+    (a, b) => effectiveSortTime(b) - effectiveSortTime(a)
+  );
 
   if (candidateRows.length === 0) {
     await updateConfig({ lastPull: new Date().toISOString() });

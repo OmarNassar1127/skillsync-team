@@ -16,3 +16,4 @@ export const HOOK_SCRIPT = join(HOOKS_DIR, 'skillsync-auto-pull.sh');
 export const LOCK_FILE = join(SKILLSYNC_DIR, '.pull-lock');
 export const BACKUPS_DIR = join(SKILLSYNC_DIR, 'backups');
 export const UPDATE_CHECK_FILE = join(SKILLSYNC_DIR, '.update-check.json');
+export const ARCHIVE_DIR = join(SKILLSYNC_DIR, 'archive');

@@ -11,6 +11,8 @@ import {
   listLocalSkills,
   bumpSkillVersion,
   validateSkillForPush,
+  getSkillTimestamps,
+  effectiveSortTime,
 } from '../lib/skills.js';
 import { pullLatest, commitAndPush } from '../lib/git.js';
 import {
@@ -47,6 +49,8 @@ async function classifySkill(skill, registry, config) {
     status = 'changed';
   }
 
+  const ts = await getSkillTimestamps(skillDir);
+
   return {
     name: skill.name,
     path: skillDir,
@@ -56,7 +60,8 @@ async function classifySkill(skill, registry, config) {
     status,
     localChecksum,
     existing,
-    preselect: status === 'changed' || status === 'new',
+    bornAt: ts.bornAt,
+    newestMtime: ts.newestMtime,
   };
 }
 
@@ -66,6 +71,7 @@ async function gatherCandidates(config, registry) {
   for (const s of local) {
     rows.push(await classifySkill(s, registry, config));
   }
+  rows.sort((a, b) => effectiveSortTime(b) - effectiveSortTime(a));
   return rows;
 }
 

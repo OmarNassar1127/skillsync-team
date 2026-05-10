@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { SKILLS_DIR, REPO_SKILLS_DIR } from '../lib/paths.js';
 import { readConfig } from '../lib/config.js';
 import { readRegistry } from '../lib/registry.js';
-import { listLocalSkills, computeChecksum } from '../lib/skills.js';
+import { listLocalSkills, computeChecksum, listArchivedSkills } from '../lib/skills.js';
 import { log } from '../lib/logger.js';
 
 export async function list() {
@@ -86,14 +86,26 @@ export async function list() {
     }
   }
 
-  if (synced.length === 0 && localChanges.length === 0 && localOnly.length === 0 && remoteOnly.length === 0) {
+  const archived = await listArchivedSkills();
+  if (archived.length > 0) {
+    log.header('Archived:');
+    for (const a of archived) {
+      const m = a.meta || {};
+      const version = m.lastVersion ? `v${m.lastVersion}` : '';
+      const ago = m.archivedAt ? timeAgo(m.archivedAt) : '';
+      log.skill(chalk.dim(a.entry), `${chalk.dim(version)}  ${chalk.dim('archived ' + ago)}`);
+    }
+  }
+
+  if (synced.length === 0 && localChanges.length === 0 && localOnly.length === 0 && remoteOnly.length === 0 && archived.length === 0) {
     log.info('No skills found locally or in shared repo.');
     log.dim('Push a skill: skillsync push <skill-name>');
   }
 
   log.newline();
   const total = synced.length + localChanges.length + localOnly.length + remoteOnly.length;
-  log.dim(`${total} total skills (${synced.length} synced, ${localOnly.length} local, ${remoteOnly.length} remote)`);
+  const archivedSuffix = archived.length > 0 ? `, ${archived.length} archived` : '';
+  log.dim(`${total} total skills (${synced.length} synced, ${localOnly.length} local, ${remoteOnly.length} remote${archivedSuffix})`);
 }
 
 function timeAgo(isoString) {

@@ -3,7 +3,9 @@ import { join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import matter from 'gray-matter';
 import semver from 'semver';
-import { SKILLS_DIR } from './paths.js';
+import { SKILLS_DIR, ARCHIVE_DIR } from './paths.js';
+
+const ARCHIVE_META = '.archive-meta.json';
 
 const EXCLUDE_PATTERNS = ['.git', '.DS_Store', 'node_modules'];
 
@@ -284,6 +286,136 @@ export function bumpSkillVersion(skillDir, level = 'patch', { updateDate = true 
   fs.writeFileSync(skillFile.path, newFm + body);
 
   return { oldVersion: currentVersion, newVersion };
+}
+
+export async function getSkillTimestamps(skillDir) {
+  let bornAt = 0;
+  let newestMtime = 0;
+
+  try {
+    const dirStat = await fs.stat(skillDir);
+    if (dirStat.birthtimeMs && dirStat.birthtimeMs > 0) {
+      bornAt = dirStat.birthtimeMs;
+    }
+    newestMtime = dirStat.mtimeMs || 0;
+
+    const files = await walkDir(skillDir);
+    for (const file of files) {
+      try {
+        const fst = await fs.stat(file);
+        if (fst.mtimeMs > newestMtime) newestMtime = fst.mtimeMs;
+      } catch {
+        // ignore individual file stat errors
+      }
+    }
+  } catch {
+    // skill dir missing — leave zeros
+  }
+
+  return { bornAt, newestMtime };
+}
+
+export function effectiveSortTime(s) {
+  return s.bornAt || s.newestMtime || 0;
+}
+
+export async function archiveSkill(skillName, { reason, archivedBy, version, checksum, wasShared } = {}) {
+  const src = join(SKILLS_DIR, skillName);
+  if (!await fs.pathExists(src)) {
+    throw new Error(`Skill "${skillName}" not found in ~/.claude/skills/`);
+  }
+
+  await fs.ensureDir(ARCHIVE_DIR);
+
+  let dest = join(ARCHIVE_DIR, skillName);
+  if (await fs.pathExists(dest)) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    dest = join(ARCHIVE_DIR, `${skillName}-${stamp}`);
+  }
+
+  await fs.move(src, dest, { overwrite: false });
+
+  const meta = {
+    name: skillName,
+    archivedAt: new Date().toISOString(),
+    archivedBy: archivedBy || 'unknown',
+    lastVersion: version || null,
+    lastChecksum: checksum || null,
+    reason: reason || null,
+    wasShared: !!wasShared,
+  };
+  await fs.writeJson(join(dest, ARCHIVE_META), meta, { spaces: 2 });
+
+  return { archivePath: dest, meta };
+}
+
+export async function unarchiveSkill(archiveEntry) {
+  const src = join(ARCHIVE_DIR, archiveEntry);
+  if (!await fs.pathExists(src)) {
+    throw new Error(`Archived skill "${archiveEntry}" not found in archive.`);
+  }
+
+  let meta = null;
+  const metaPath = join(src, ARCHIVE_META);
+  if (await fs.pathExists(metaPath)) {
+    try {
+      meta = await fs.readJson(metaPath);
+    } catch {
+      meta = null;
+    }
+  }
+
+  const restoredName = (meta && meta.name) || archiveEntry.replace(/-\d{4}-\d{2}-\d{2}T.*$/, '');
+  const dest = join(SKILLS_DIR, restoredName);
+
+  if (await fs.pathExists(dest)) {
+    throw new Error(
+      `A skill named "${restoredName}" already exists in ~/.claude/skills/. Archive or remove it first.`
+    );
+  }
+
+  await fs.ensureDir(SKILLS_DIR);
+  await fs.move(src, dest, { overwrite: false });
+
+  const restoredMeta = join(dest, ARCHIVE_META);
+  if (await fs.pathExists(restoredMeta)) {
+    await fs.remove(restoredMeta);
+  }
+
+  return { restoredPath: dest, restoredName, meta };
+}
+
+export async function listArchivedSkills() {
+  if (!await fs.pathExists(ARCHIVE_DIR)) return [];
+
+  const entries = await fs.readdir(ARCHIVE_DIR, { withFileTypes: true });
+  const items = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || shouldExclude(entry.name)) continue;
+    const dirPath = join(ARCHIVE_DIR, entry.name);
+    let meta = null;
+    const metaPath = join(dirPath, ARCHIVE_META);
+    if (await fs.pathExists(metaPath)) {
+      try {
+        meta = await fs.readJson(metaPath);
+      } catch {
+        meta = null;
+      }
+    }
+    items.push({
+      entry: entry.name,
+      path: dirPath,
+      meta,
+    });
+  }
+
+  items.sort((a, b) => {
+    const at = a.meta?.archivedAt || '';
+    const bt = b.meta?.archivedAt || '';
+    return bt.localeCompare(at);
+  });
+  return items;
 }
 
 export async function backupSkill(skillName, skillsDir, backupsDir) {

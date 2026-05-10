@@ -151,4 +151,34 @@ program
     await remove(skillName);
   }));
 
+program
+  .command('archive')
+  .argument('[skill-name]', 'Name of the skill to archive (omit for picker)')
+  .option('-a, --all', 'Archive every local skill, no picker')
+  .option('-r, --reason <msg>', 'Reason for archiving (stored in metadata)')
+  .option('-m, --message <msg>', 'Custom commit message')
+  .description('Archive skill(s) — remove from shared repo + deactivate local copy (preserved in archive)')
+  .action(wrapAction(async (skillName, options) => {
+    const { archive } = await import('./commands/archive.js');
+    await archive(skillName, options);
+  }));
+
+program
+  .command('unarchive')
+  .argument('[skill-name]', 'Name of the archived skill to restore (omit for picker)')
+  .option('-a, --all', 'Unarchive everything, no picker')
+  .description('Restore an archived skill back to ~/.claude/skills/')
+  .action(wrapAction(async (skillName, options) => {
+    const { unarchive } = await import('./commands/unarchive.js');
+    await unarchive(skillName, options);
+  }));
+
+program
+  .command('archived')
+  .description('List all archived skills with metadata')
+  .action(wrapAction(async () => {
+    const { archived } = await import('./commands/archived.js');
+    await archived();
+  }));
+
 program.parse();

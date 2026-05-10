@@ -4,7 +4,18 @@
 
 You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudeception) to extract reusable skills from work sessions. But those skills are siloed on individual machines. SkillSync bridges the gap — a shared Git repo as the single source of truth, a CLI to push and pull, and an auto-sync hook so everyone stays current.
 
-## What's new in 2.x
+## What's new in 3.0
+
+- **`skillsync archive [skill]`** — clean up your skill set without losing anything. Archive removes a skill from the shared repo + registry **and** moves your local copy out of `~/.claude/skills/` into `~/.skillsync/archive/`. Claude Code stops loading it; the files are preserved with metadata (when, who, why) for later restoration.
+- **`skillsync unarchive [skill]`** — restore an archived skill back to active use. Picker shows what's in your archive, with the date and reason from when you archived.
+- **`skillsync archived`** — list everything currently in your archive with metadata.
+- **Picker order**: skills now sort by **filesystem timestamp** (birth time, falling back to most-recent file mtime), newest first. The skills you just edited float to the top — no more hunting alphabetically.
+- **Default unchecked** in pickers — push and pull no longer pre-select anything. You actively pick what to act on. Safer.
+- **"Archived" section** in `skillsync list` so your archive stays discoverable.
+
+Upgrade existing installs: `skillsync update` (or `npm install -g skillsync-team@latest`)
+
+## What was new in 2.x
 
 **2.2**
 - **`skillsync diff <skill>`** — see exactly what would change before you push or pull. Side-by-side diff between your local skill and the shared repo. Pass `--pull` to flip direction.
@@ -97,6 +108,9 @@ Now skills auto-pull at the start of each Claude Code session (1-hour cooldown).
 | `skillsync remove <skill-name>` | Remove a skill from shared repo (keeps local) |
 | `skillsync update` | Self-update SkillSync to the latest version on npm |
 | `skillsync diff <skill>` | Show what would change between your local skill and the shared repo |
+| `skillsync archive [skill]` | Archive skill(s) — drops from shared repo and deactivates locally (preserved in `~/.skillsync/archive/`) |
+| `skillsync unarchive [skill]` | Restore an archived skill back to `~/.claude/skills/` |
+| `skillsync archived` | List archived skills with metadata |
 
 ### Push flags
 

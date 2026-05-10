@@ -5,12 +5,20 @@ import { dirname, join } from 'node:path';
 import chalk from 'chalk';
 import { getUpdateInfo, printUpdateBanner } from './lib/version-check.js';
 
+// Fast-path for shell completion — bypass Commander entirely for sub-millisecond responsiveness
+if (process.argv[2] === '__complete') {
+  const args = process.argv.slice(3);
+  const { complete } = await import('./commands/__complete.js');
+  await complete(args);
+  process.exit(0);
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
 const program = new Command();
 
-const SKIP_UPDATE_BANNER = new Set(['update']);
+const SKIP_UPDATE_BANNER = new Set(['update', 'completion']);
 
 function wrapAction(fn, commandName) {
   return async (...args) => {
@@ -180,5 +188,14 @@ program
     const { archived } = await import('./commands/archived.js');
     await archived();
   }));
+
+program
+  .command('completion')
+  .argument('[shell]', 'Shell to print completion script for: bash, zsh, fish')
+  .description('Print shell tab-completion script. Pipe into your rc file.')
+  .action(wrapAction(async (shell) => {
+    const { completion } = await import('./commands/completion.js');
+    await completion(shell);
+  }, 'completion'));
 
 program.parse();

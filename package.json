@@ -1,14 +1,15 @@
 {
   "name": "skillsync-team",
   "version": "3.0.0",
-  "description": "Git-native skill sharing for Claude Code teams — interactive push/pull picker, auto version bump on edit, batch commits.",
+  "description": "Git-native skill sharing for Claude Code teams. Interactive picker, archive/unarchive lifecycle, auto version bump, tab completion (bash/zsh/fish).",
   "type": "module",
   "bin": {
     "skillsync": "./bin/skillsync.js"
   },
   "files": [
     "bin/",
-    "src/"
+    "src/",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=18.0.0"

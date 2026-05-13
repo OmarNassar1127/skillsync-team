@@ -4,6 +4,10 @@
 
 You and your team use [Claudeception](https://github.com/OmarNassar1127/Claudeception) to extract reusable skills from work sessions. But those skills are siloed on individual machines. SkillSync bridges the gap — a shared Git repo as the single source of truth, a CLI to push and pull, and an auto-sync hook so everyone stays current.
 
+## What's new in 3.1
+
+- **`skillsync search`** — true semantic search across your team's skills. Runs **offline** via a local ONNX model (`Xenova/all-MiniLM-L6-v2`). No API key, no network at search time. Two modes: interactive type-as-you-go search bar (no args) or scriptable batch mode (`skillsync search "query"`). Hybrid scoring: substring matches return in ~30ms, fuzzy queries fall through to semantic in ~150ms with the model cached. Embeddings ride along in `registry.json` and are computed at push time so the whole team benefits.
+
 ## What's new in 3.0
 
 - **`skillsync archive [skill]`** — clean up your skill set without losing anything. Archive removes a skill from the shared repo + registry **and** moves your local copy out of `~/.claude/skills/` into `~/.skillsync/archive/`. Claude Code stops loading it; the files are preserved with metadata (when, who, why) for later restoration.
@@ -128,6 +132,7 @@ Now skills auto-pull at the start of each Claude Code session (1-hour cooldown).
 | `skillsync unarchive [skill]` | Restore an archived skill back to `~/.claude/skills/` |
 | `skillsync archived` | List archived skills with metadata |
 | `skillsync completion <shell>` | Print a tab-completion script for bash, zsh, or fish |
+| `skillsync search [query]` | Semantic search across all known skills (interactive if no query) |
 
 ### Push flags
 

@@ -27,6 +27,7 @@ import {
 import { SkillNotFoundError, SkillSyncError } from '../lib/errors.js';
 import { log, spinner } from '../lib/logger.js';
 import { pickSkillsToPush } from '../lib/picker.js';
+import { embedText } from '../lib/semantic.js';
 
 const VALID_BUMP_LEVELS = new Set(['patch', 'minor', 'major', 'none']);
 
@@ -135,7 +136,18 @@ async function pushOne(skillName, options, registry, config, bumpLevel) {
   const files = await listSkillFiles(skillDir);
   await copySkillToRepo(skillName, SKILLS_DIR, REPO_SKILLS_DIR);
 
-  await addSkillToRegistry(registry, skillName, metadata, config.author, files, checksum);
+  // Compute semantic embedding for skill discovery (skillsync search). Best-effort:
+  // model download/load failures fall back to no embedding rather than blocking the push.
+  let descriptionEmbedding = null;
+  if (metadata.description) {
+    try {
+      descriptionEmbedding = await embedText(`${metadata.name}: ${metadata.description}`);
+    } catch {
+      // Silently skip — embeddings are lazy-generated on first search anyway.
+    }
+  }
+
+  await addSkillToRegistry(registry, skillName, metadata, config.author, files, checksum, descriptionEmbedding);
   registerMember(registry, config.author);
   incrementMemberPush(registry, config.author);
 

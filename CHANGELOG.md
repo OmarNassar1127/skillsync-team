@@ -2,7 +2,7 @@
 
 All notable changes to `skillsync-team`.
 
-## [3.0.0] — 2026-05-17
+## [3.0.0] — 2026-05-13
 
 > **Lifecycle, security, and ergonomics.**
 

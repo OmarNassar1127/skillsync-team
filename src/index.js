@@ -3,16 +3,36 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import chalk from 'chalk';
+import { getUpdateInfo, printUpdateBanner } from './lib/version-check.js';
+
+// Fast-path for shell completion — bypass Commander entirely for sub-millisecond responsiveness
+if (process.argv[2] === '__complete') {
+  const args = process.argv.slice(3);
+  const { complete } = await import('./commands/__complete.js');
+  await complete(args);
+  process.exit(0);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
 const program = new Command();
 
-function wrapAction(fn) {
+const SKIP_UPDATE_BANNER = new Set(['update', 'completion']);
+
+function wrapAction(fn, commandName) {
   return async (...args) => {
+    const updatePromise = SKIP_UPDATE_BANNER.has(commandName)
+      ? Promise.resolve(null)
+      : getUpdateInfo().catch(() => null);
+
     try {
       await fn(...args);
+      const info = await Promise.race([
+        updatePromise,
+        new Promise((resolve) => setTimeout(() => resolve(null), 500)),
+      ]);
+      printUpdateBanner(info);
     } catch (err) {
       if (err.name === 'SkillSyncError') {
         console.error(chalk.red(`\n  Error: ${err.message}`));
@@ -111,6 +131,16 @@ program
   }));
 
 program
+  .command('diff')
+  .argument('<skill-name>', 'Skill to diff against the shared repo')
+  .option('--pull', 'Show what would change locally if you pulled (repo → local)')
+  .description('Show the diff between your local skill and the shared repo version')
+  .action(wrapAction(async (skillName, options) => {
+    const { diff } = await import('./commands/diff.js');
+    await diff(skillName, options);
+  }));
+
+program
   .command('update')
   .option('--check', 'Only check for updates, do not install')
   .option('-f, --force', 'Reinstall even if already on the latest version')
@@ -118,7 +148,7 @@ program
   .action(wrapAction(async (options) => {
     const { update } = await import('./commands/update.js');
     await update(options);
-  }));
+  }, 'update'));
 
 program
   .command('remove')
@@ -128,5 +158,44 @@ program
     const { remove } = await import('./commands/remove.js');
     await remove(skillName);
   }));
+
+program
+  .command('archive')
+  .argument('[skill-name]', 'Name of the skill to archive (omit for picker)')
+  .option('-a, --all', 'Archive every local skill, no picker')
+  .option('-r, --reason <msg>', 'Reason for archiving (stored in metadata)')
+  .option('-m, --message <msg>', 'Custom commit message')
+  .description('Archive skill(s) — remove from shared repo + deactivate local copy (preserved in archive)')
+  .action(wrapAction(async (skillName, options) => {
+    const { archive } = await import('./commands/archive.js');
+    await archive(skillName, options);
+  }));
+
+program
+  .command('unarchive')
+  .argument('[skill-name]', 'Name of the archived skill to restore (omit for picker)')
+  .option('-a, --all', 'Unarchive everything, no picker')
+  .description('Restore an archived skill back to ~/.claude/skills/')
+  .action(wrapAction(async (skillName, options) => {
+    const { unarchive } = await import('./commands/unarchive.js');
+    await unarchive(skillName, options);
+  }));
+
+program
+  .command('archived')
+  .description('List all archived skills with metadata')
+  .action(wrapAction(async () => {
+    const { archived } = await import('./commands/archived.js');
+    await archived();
+  }));
+
+program
+  .command('completion')
+  .argument('[shell]', 'Shell to print completion script for: bash, zsh, fish')
+  .description('Print shell tab-completion script. Pipe into your rc file.')
+  .action(wrapAction(async (shell) => {
+    const { completion } = await import('./commands/completion.js');
+    await completion(shell);
+  }, 'completion'));
 
 program.parse();

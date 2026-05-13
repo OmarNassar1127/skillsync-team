@@ -10,6 +10,10 @@ import {
   copySkillToRepo,
   listLocalSkills,
   bumpSkillVersion,
+  validateSkillForPush,
+  getSkillTimestamps,
+  effectiveSortTime,
+  validateSkillName,
 } from '../lib/skills.js';
 import { pullLatest, commitAndPush } from '../lib/git.js';
 import {
@@ -46,6 +50,8 @@ async function classifySkill(skill, registry, config) {
     status = 'changed';
   }
 
+  const ts = await getSkillTimestamps(skillDir);
+
   return {
     name: skill.name,
     path: skillDir,
@@ -55,7 +61,8 @@ async function classifySkill(skill, registry, config) {
     status,
     localChecksum,
     existing,
-    preselect: status === 'changed' || status === 'new',
+    bornAt: ts.bornAt,
+    newestMtime: ts.newestMtime,
   };
 }
 
@@ -65,6 +72,7 @@ async function gatherCandidates(config, registry) {
   for (const s of local) {
     rows.push(await classifySkill(s, registry, config));
   }
+  rows.sort((a, b) => effectiveSortTime(b) - effectiveSortTime(a));
   return rows;
 }
 
@@ -80,6 +88,7 @@ function resolveBumpLevel(options) {
 }
 
 async function pushOne(skillName, options, registry, config, bumpLevel) {
+  validateSkillName(skillName);
   const skillDir = join(SKILLS_DIR, skillName);
   if (!await fs.pathExists(skillDir)) {
     throw new SkillNotFoundError(skillName);
@@ -90,6 +99,18 @@ async function pushOne(skillName, options, registry, config, bumpLevel) {
       `Skill "${skillName}" is in your exclude list.`,
       'Use --force to push anyway, or edit ~/.skillsync/config.json'
     );
+  }
+
+  const validation = validateSkillForPush(skillDir);
+  if (validation.errors.length > 0) {
+    const issues = validation.errors.map(e => `  · ${e}`).join('\n');
+    throw new SkillSyncError(
+      `${skillName} is not a valid skill:\n${issues}`,
+      'Fix the issues above and try again.'
+    );
+  }
+  for (const w of validation.warnings) {
+    log.warn(`${skillName}: ${w}`);
   }
 
   let metadata = parseSkillMetadata(skillDir);

@@ -5,8 +5,9 @@ import { REPO_SKILLS_DIR } from '../lib/paths.js';
 import { readConfig } from '../lib/config.js';
 import { pullLatest, commitAndPush } from '../lib/git.js';
 import { readRegistry, writeRegistry, removeSkillFromRegistry, generateReadme } from '../lib/registry.js';
-import { SkillNotFoundError } from '../lib/errors.js';
+import { SkillNotFoundError, SkillSyncError } from '../lib/errors.js';
 import { log, spinner } from '../lib/logger.js';
+import { isValidSkillName } from '../lib/skills.js';
 
 async function confirm(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -19,6 +20,13 @@ async function confirm(question) {
 }
 
 export async function remove(skillName) {
+  if (!isValidSkillName(skillName)) {
+    throw new SkillSyncError(
+      `Invalid skill name: "${skillName}".`,
+      'Skill names must contain only letters, digits, dashes, dots, or underscores — and must not be a relative path.'
+    );
+  }
+
   const config = await readConfig();
 
   const registry = await readRegistry();

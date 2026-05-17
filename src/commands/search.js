@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { readConfig } from '../lib/config.js';
 import { readRegistry, writeRegistry } from '../lib/registry.js';
 import { embedText, cosineSimilarity, isValidEmbedding } from '../lib/semantic.js';
-import { log, spinner } from '../lib/logger.js';
+import { log } from '../lib/logger.js';
 import { SkillSyncError } from '../lib/errors.js';
 
 const DEFAULT_LIMIT = 8;
@@ -88,11 +88,14 @@ function collectSkills(registry) {
 
 // Lazy-generate embeddings for skills that don't have one yet.
 // Called once per `skillsync search` invocation.
+// NOTE: deliberately uses a static log line, NOT an ora spinner — an animated
+// spinner running concurrently with the transformers model load floods the
+// stdout buffer and can deadlock under a pty (CI, `expect`, some terminals).
 async function ensureEmbeddings(skills) {
   const missing = skills.filter(s => !isValidEmbedding(s.descriptionEmbedding) && s.description);
   if (missing.length === 0) return { skills, generated: 0 };
 
-  const s = spinner(`Generating embeddings for ${missing.length} skill${missing.length === 1 ? '' : 's'}...`);
+  log.dim(`Generating embeddings for ${missing.length} skill${missing.length === 1 ? '' : 's'}...`);
   for (const sk of missing) {
     try {
       sk.descriptionEmbedding = await embedText(`${sk.name}: ${sk.description}`);
@@ -100,7 +103,7 @@ async function ensureEmbeddings(skills) {
       // Skip — that skill just won't appear in semantic results.
     }
   }
-  s.succeed(`Generated ${missing.length} embedding${missing.length === 1 ? '' : 's'}`);
+  log.dim(`Generated ${missing.length} embedding${missing.length === 1 ? '' : 's'}.`);
   return { skills, generated: missing.length };
 }
 
@@ -121,12 +124,13 @@ async function persistEmbeddings(skills, registry) {
 }
 
 async function runInteractive(skills, registry) {
-  const sLoad = spinner('Loading semantic model...');
+  // Static message, not an ora spinner — see note on ensureEmbeddings().
+  log.dim('Loading semantic model (first run downloads ~25MB)...');
   try {
     await embedText('warmup');
-    sLoad.succeed('Semantic model ready');
+    log.success('Semantic model ready.');
   } catch (err) {
-    sLoad.fail('Semantic model failed to load — falling back to lexical search only');
+    log.warn('Semantic model failed to load — falling back to lexical search only.');
   }
 
   await ensureEmbeddings(skills);

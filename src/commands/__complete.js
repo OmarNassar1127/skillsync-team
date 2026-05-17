@@ -4,7 +4,7 @@ import { SKILLS_DIR, ARCHIVE_DIR, REGISTRY_FILE } from '../lib/paths.js';
 const SUBCOMMANDS = [
   'init', 'push', 'pull', 'list', 'status', 'team',
   'link', 'unlink', 'remove', 'diff', 'update',
-  'archive', 'unarchive', 'archived', 'completion', 'search',
+  'archive', 'unarchive', 'archived', 'completion', 'search', 'version',
 ];
 
 const SHELLS = ['bash', 'zsh', 'fish'];

@@ -18,7 +18,7 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8
 
 const program = new Command();
 
-const SKIP_UPDATE_BANNER = new Set(['update', 'completion']);
+const SKIP_UPDATE_BANNER = new Set(['update', 'completion', 'version']);
 
 function wrapAction(fn, commandName) {
   return async (...args) => {
@@ -52,7 +52,7 @@ function wrapAction(fn, commandName) {
 program
   .name('skillsync')
   .description('Git-native skill sharing for Claude Code teams')
-  .version(pkg.version);
+  .version(pkg.version, '-v, --version', 'Output the installed version number');
 
 program
   .command('init')
@@ -207,5 +207,13 @@ program
     const { completion } = await import('./commands/completion.js');
     await completion(shell);
   }, 'completion'));
+
+program
+  .command('version')
+  .alias('v')
+  .description('Show the installed SkillSync version')
+  .action(wrapAction(async () => {
+    console.log(`  skillsync-team v${pkg.version}`);
+  }, 'version'));
 
 program.parse();

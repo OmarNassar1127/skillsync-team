@@ -2,6 +2,10 @@
 
 All notable changes to `skillsync-team`.
 
+## [3.1.1] — 2026-05-17
+
+- **`skillsync version`** (alias `v`) and lowercase **`-v`** flag — quick ways to print the installed version. `--version` and `-V` continue to work.
+
 ## [3.1.0] — 2026-05-17
 
 > **Discoverability.**

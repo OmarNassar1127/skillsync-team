@@ -44,7 +44,7 @@ No data migration needed — existing registries work, new embeddings generate o
 
 ---
 
-## [3.0.0] — 2026-05-17
+
 
 > **Lifecycle, security, and ergonomics.**
 

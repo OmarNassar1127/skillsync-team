@@ -2,7 +2,49 @@
 
 All notable changes to `skillsync-team`.
 
-## [3.0.0] — 2026-05-13
+## [3.1.0] — 2026-05-XX
+
+> **Discoverability.**
+
+### New: `skillsync search`
+
+Find the skill you forgot you had. Two modes:
+
+```bash
+skillsync search                          # interactive search bar (type-as-you-go)
+skillsync search "rate limiting on APIs"  # batch mode, top 8 by relevance
+```
+
+- **True semantic search** — "scraper" matches "data extraction", "rate limiting" matches "throttling". Powered by `Xenova/all-MiniLM-L6-v2` (384-dim sentence embeddings).
+- **Runs offline** — local ONNX model via `@huggingface/transformers`. No API key, no network at search time.
+- **Hybrid scoring** — exact substring matches return in ~30ms (lexical pre-filter). Fuzzy queries fall through to semantic in ~150ms (with model cached).
+- **Embeddings ride along in `registry.json`** — computed at push time, shared with the team. New `descriptionEmbedding` field per skill (384 floats).
+- **Lazy migration** — skills pushed before 3.1 have no embedding. First `skillsync search` generates them on-the-fly and persists them.
+- **Quality**: 8/10 on typical short-description queries. STSb benchmark ~83 spearman.
+
+### Why it matters
+
+Your team's shared repo grows. You forget which teammate pushed the helpful caching skill, or whether anyone has built a Stripe utility yet. `skillsync search` makes that searchable by meaning, not just by remembering names.
+
+### Trade-offs
+
+- First-ever invocation downloads the ~25MB model from HuggingFace CDN (~10s on broadband). Cached locally after.
+- Adds `@huggingface/transformers` and ONNX runtime to the install (~15MB).
+- `package.json` description and `files` array updated.
+
+### Upgrade
+
+```bash
+skillsync update
+# or
+npm install -g skillsync-team@latest
+```
+
+No data migration needed — existing registries work, new embeddings generate on first search.
+
+---
+
+
 
 > **Lifecycle, security, and ergonomics.**
 

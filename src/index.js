@@ -190,6 +190,16 @@ program
   }));
 
 program
+  .command('search')
+  .argument('[query]', 'Search query (omit for interactive search bar)')
+  .option('-n, --limit <n>', 'Max results in batch mode (default 8)', (v) => parseInt(v, 10))
+  .description('Semantic search across all known skills (offline, local model)')
+  .action(wrapAction(async (query, options) => {
+    const { searchCmd } = await import('./commands/search.js');
+    await searchCmd(query, options);
+  }));
+
+program
   .command('completion')
   .argument('[shell]', 'Shell to print completion script for: bash, zsh, fish')
   .description('Print shell tab-completion script. Pipe into your rc file.')

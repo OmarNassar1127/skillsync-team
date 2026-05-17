@@ -20,7 +20,8 @@ export async function writeRegistry(registry) {
   await fs.writeJson(REGISTRY_FILE, registry, { spaces: 2 });
 }
 
-export async function addSkillToRegistry(registry, skillName, metadata, author, files, checksum) {
+export async function addSkillToRegistry(registry, skillName, metadata, author, files, checksum, descriptionEmbedding = null) {
+  const existing = registry.skills[skillName];
   registry.skills[skillName] = {
     name: metadata.name,
     description: metadata.description.slice(0, 300),
@@ -32,6 +33,8 @@ export async function addSkillToRegistry(registry, skillName, metadata, author, 
     files,
     hasAllowedTools: metadata.hasAllowedTools,
     checksum,
+    // Preserve old embedding if caller passes null (e.g. when the model isn't loadable)
+    descriptionEmbedding: descriptionEmbedding ?? existing?.descriptionEmbedding ?? null,
   };
   return registry;
 }

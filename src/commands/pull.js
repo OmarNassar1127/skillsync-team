@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import { join } from 'node:path';
+import chalk from 'chalk';
 import { SKILLS_DIR, REPO_SKILLS_DIR, BACKUPS_DIR } from '../lib/paths.js';
 import { readConfig, updateConfig } from '../lib/config.js';
 import { pullLatest } from '../lib/git.js';
@@ -117,18 +118,27 @@ export async function pull(options) {
   const selectedSet = new Set(selected);
   const newApplied = [];
   const updatedApplied = [];
+  const skippedUnsafe = [];
 
   for (const row of newRows) {
     if (!selectedSet.has(row.name)) continue;
-    await copySkillFromRepo(row.name, REPO_SKILLS_DIR, SKILLS_DIR);
-    newApplied.push(row);
+    try {
+      await copySkillFromRepo(row.name, REPO_SKILLS_DIR, SKILLS_DIR);
+      newApplied.push(row);
+    } catch (err) {
+      skippedUnsafe.push({ name: row.name, reason: err.message });
+    }
   }
 
   for (const row of updatedRows) {
     if (!selectedSet.has(row.name)) continue;
-    const backupPath = await backupSkill(row.name, SKILLS_DIR, BACKUPS_DIR);
-    await copySkillFromRepo(row.name, REPO_SKILLS_DIR, SKILLS_DIR);
-    updatedApplied.push({ ...row, backupPath });
+    try {
+      const backupPath = await backupSkill(row.name, SKILLS_DIR, BACKUPS_DIR);
+      await copySkillFromRepo(row.name, REPO_SKILLS_DIR, SKILLS_DIR);
+      updatedApplied.push({ ...row, backupPath });
+    } catch (err) {
+      skippedUnsafe.push({ name: row.name, reason: err.message });
+    }
   }
 
   await updateConfig({ lastPull: new Date().toISOString() });
@@ -151,6 +161,13 @@ export async function pull(options) {
 
   if (unchangedSkills.length > 0) {
     log.dim(`\n  Unchanged: ${unchangedSkills.length} skills`);
+  }
+
+  if (skippedUnsafe.length > 0) {
+    log.warn(`Skipped ${skippedUnsafe.length} unsafe skill(s) — possible tampering in the shared repo:`);
+    for (const s of skippedUnsafe) {
+      log.skill(chalk.red(s.name), chalk.red(s.reason));
+    }
   }
 
   const skipped = candidateRows.length - selected.length;

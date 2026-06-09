@@ -141,6 +141,29 @@ async function walkDir(dir) {
   return files;
 }
 
+// Refuse symlinks anywhere in a skill tree. Skills sync through a shared repo
+// that SkillSync treats as untrusted; a symlink (e.g. `leaked.txt -> ~/.ssh/id_rsa`)
+// would otherwise have its target's content copied across the trust boundary —
+// into ~/.claude/skills on pull, or into the shared repo on push. Fail closed.
+async function assertNoSymlinks(dir) {
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (shouldExclude(entry.name)) continue;
+    const fullPath = join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      throw new Error(`Refusing to copy skill: "${entry.name}" is a symbolic link. Skills must not contain symlinks (possible tampering in the shared repo).`);
+    }
+    if (entry.isDirectory()) {
+      await assertNoSymlinks(fullPath);
+    }
+  }
+}
+
 export async function computeChecksum(skillDir) {
   const files = await walkDir(skillDir);
   files.sort();
@@ -166,10 +189,11 @@ export async function copySkillToRepo(skillName, skillsDir, repoSkillsDir) {
   const src = join(skillsDir, skillName);
   const dest = join(repoSkillsDir, skillName);
 
+  await assertNoSymlinks(src);
   await fs.ensureDir(dest);
   await fs.copy(src, dest, {
     overwrite: true,
-    dereference: true,
+    dereference: false,
     filter: (srcPath) => {
       const name = srcPath.split('/').pop();
       return !shouldExclude(name);
@@ -182,10 +206,11 @@ export async function copySkillFromRepo(skillName, repoSkillsDir, skillsDir) {
   const src = join(repoSkillsDir, skillName);
   const dest = join(skillsDir, skillName);
 
+  await assertNoSymlinks(src);
   await fs.ensureDir(dest);
   await fs.copy(src, dest, {
     overwrite: true,
-    dereference: true,
+    dereference: false,
     filter: (srcPath) => {
       const name = srcPath.split('/').pop();
       return !shouldExclude(name);

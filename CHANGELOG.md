@@ -2,6 +2,14 @@
 
 All notable changes to `skillsync-team`.
 
+## [3.1.3] — 2026-06-09
+
+> **Security.**
+
+### Fixed: local file disclosure via symlinks in shared skills
+
+Skills are copied between `~/.claude/skills/` and the shared repo with `fs.copy`, which previously dereferenced symlinks. A malicious skill in the shared repo could ship a symlink (for example `leaked.txt` pointing at `~/.ssh/id_rsa`); on `skillsync pull` the link's target content was copied into the local skill, and on push it could be written back into the shared repo. SkillSync now refuses to copy any skill tree containing a symlink (both pull and push), `pull` skips a tampered skill and warns instead of aborting, and the auto-sync hook runs `rsync --no-links`. Re-run `skillsync link` to update an already-installed hook.
+
 ## [3.1.2] — 2026-06-09
 
 > **Security.**

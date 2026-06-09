@@ -42,7 +42,9 @@ if [ $? -eq 0 ]; then
       [ -d "$skill_dir" ] || continue
       skill_name=$(basename "$skill_dir")
       mkdir -p "$SKILLS_DST/$skill_name"
-      rsync -a --delete --exclude='.git' --exclude='.DS_Store' \\
+      # --no-links: skip symlinks. A skill from the shared repo is untrusted; a
+      # symlink could point at local secrets (e.g. ~/.ssh/id_rsa) and leak them.
+      rsync -a --no-links --delete --exclude='.git' --exclude='.DS_Store' \\
         "$skill_dir" "$SKILLS_DST/$skill_name/" 2>/dev/null
     done
   fi

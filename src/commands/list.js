@@ -19,8 +19,13 @@ export async function list() {
   const localChanges = [];
   const localOnly = [];
   const remoteOnly = [];
+  const invalid = [];
 
   for (const skill of localSkills) {
+    if (skill.metadata?.invalid) {
+      invalid.push(skill);
+      continue;
+    }
     if (remoteNames.has(skill.name)) {
       const remoteEntry = registry.skills[skill.name];
       const localChecksum = await computeChecksum(skill.path);
@@ -83,6 +88,13 @@ export async function list() {
       const version = `v${s.skillVersion}`;
       const by = `by ${s.pushedBy}`;
       log.skill(s.name, `${chalk.dim(version)}  ${chalk.dim(by)}  ${chalk.cyan('pull to get')}`);
+    }
+  }
+
+  if (invalid.length > 0) {
+    log.header('Invalid (skipped):');
+    for (const s of invalid) {
+      log.skill(chalk.red(s.name), chalk.red(`unparseable frontmatter — ${s.metadata.error}`));
     }
   }
 

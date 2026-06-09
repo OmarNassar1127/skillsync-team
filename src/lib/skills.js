@@ -9,6 +9,21 @@ const ARCHIVE_META = '.archive-meta.json';
 
 const EXCLUDE_PATTERNS = ['.git', '.DS_Store', 'node_modules'];
 
+// gray-matter ships a `javascript` engine that runs eval() on `---js` frontmatter.
+// Skills come from a shared repo we treat as untrusted, so disable it: only YAML/JSON
+// frontmatter is allowed. The `js` tag aliases to `javascript`, so one override covers both.
+const SAFE_MATTER_OPTIONS = {
+  engines: {
+    javascript: () => {
+      throw new Error('JavaScript front matter is not allowed.');
+    },
+  },
+};
+
+function parseFrontmatter(raw) {
+  return matter(raw, SAFE_MATTER_OPTIONS);
+}
+
 function shouldExclude(name) {
   return EXCLUDE_PATTERNS.includes(name);
 }
@@ -40,7 +55,26 @@ export function parseSkillMetadata(skillDir) {
   }
 
   const raw = fs.readFileSync(skillFile.path, 'utf8');
-  const { data, content } = matter(raw);
+
+  let parsed;
+  try {
+    parsed = parseFrontmatter(raw);
+  } catch (err) {
+    // Malformed or disallowed frontmatter (e.g. `---js`). Don't let one bad skill
+    // crash list/status/search — return a flagged fallback so callers can skip it.
+    return {
+      name: dirName,
+      description: '',
+      author: 'unknown',
+      version: '0.0.0',
+      date: new Date().toISOString().split('T')[0],
+      hasAllowedTools: false,
+      skillFile: skillFile.filename,
+      invalid: true,
+      error: err.message,
+    };
+  }
+  const { data, content } = parsed;
 
   const hasData = data && Object.keys(data).length > 0;
 
@@ -180,7 +214,7 @@ export function validateSkillForPush(skillDir) {
 
   let parsed;
   try {
-    parsed = matter(raw);
+    parsed = parseFrontmatter(raw);
   } catch (err) {
     errors.push(`Malformed YAML frontmatter in ${skillFile.filename}: ${err.message}`);
     return { errors, warnings };

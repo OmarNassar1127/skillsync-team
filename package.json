@@ -1,6 +1,6 @@
 {
   "name": "skillsync-team",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Git-native skill sharing for Claude Code teams. Semantic search, archive lifecycle, interactive picker, auto version bump, tab completion (bash/zsh/fish).",
   "type": "module",
   "bin": {

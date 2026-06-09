@@ -2,6 +2,14 @@
 
 All notable changes to `skillsync-team`.
 
+## [3.1.2] — 2026-06-09
+
+> **Security.**
+
+### Fixed: arbitrary code execution via skill frontmatter
+
+`gray-matter` ships a `javascript` engine that runs `eval()` on any SKILL.md whose frontmatter opens with `---js`. Skills are pulled from a shared repo that SkillSync treats as untrusted, so a malicious skill could run arbitrary code on a teammate's machine the moment it was parsed (during `skillsync list`, `status`, `search`, or `push`). Frontmatter parsing now allows YAML/JSON only and rejects JavaScript. A skill with unparseable frontmatter is flagged and skipped instead of crashing the command.
+
 ## [3.1.1] — 2026-05-17
 
 - **`skillsync version`** (alias `v`) and lowercase **`-v`** flag — quick ways to print the installed version. `--version` and `-V` continue to work.
